@@ -1,0 +1,23 @@
+{
+  "name": "niko-mini-react",
+  "version": "1.0.0",
+  "description": "A small react framework.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hscGit/niko-mini-react.git"
+  },
+  "keywords": [
+    "niko",
+    "mini-react"
+  ],
+  "author": "2862664216@qq.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hscGit/niko-mini-react/issues"
+  },
+  "homepage": "https://github.com/hscGit/niko-mini-react#readme"
+}
