@@ -12,23 +12,30 @@ export function updateHostComponent(workInProgress) {
 }
 
 // 更新函数组件
-export function updateFunctionComponent(params) {
-    
+export function updateFunctionComponent(workInProgress) {
+    const {type, props} = workInProgress;
+
+    const children = type(props);
+    reconcileChildren(workInProgress, children);
 }
 
 // 更新类组件
-export function updateClassComponent(params) {
-    
+export function updateClassComponent(workInProgress) {
+    const {type, props} = workInProgress;
+    const instance = new type(props);
+
+    const children = instance.render();
+    reconcileChildren(workInProgress, children);
 }
 
 // 更新Fragment组件
-export function updateFragmentComponent(params) {
-    
+export function updateFragmentComponent(workInProgress) {
+    reconcileChildren(workInProgress, workInProgress.props.children);
 }
 
 // 更新文本组件
-export function updateHostTextComponent(params) {
-    
+export function updateHostTextComponent(workInProgress) {
+    workInProgress.stateNode = document.createTextNode(workInProgress.props.children);
 }
 
 // diff

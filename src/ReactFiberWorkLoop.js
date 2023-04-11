@@ -1,5 +1,6 @@
 import { updateClassComponent, updateFragmentComponent, updateFunctionComponent, updateHostComponent, updateHostTextComponent } from "./ReactFiberReconciler";
 import { ClassComponent, Fragment, FunctionComponent, HostComponent, HostText } from "./ReactWorkTags";
+import { scheduleCallback } from "./schedule";
 import { Placement } from "./utils";
 
 let workInProgress = null; // 当前正在工作中的
@@ -9,6 +10,9 @@ let workInProgressRoot = null;
 export function scheduleUpdateOnFiber(fiber) {
     workInProgress = fiber;
     workInProgressRoot = fiber;
+
+    // 任务调度
+    scheduleCallback(workLoop);
 }
 
 function performUnitOfWork() {
@@ -48,7 +52,7 @@ function performUnitOfWork() {
     let next = workInProgress;
 
     while (next) {
-        if (workInProgress.sibling) {
+        if (next.sibling) {
             workInProgress = next.sibling;
             return;
         }
@@ -56,9 +60,23 @@ function performUnitOfWork() {
     }
     workInProgress = null;
 }
+/*
+ * 浏览器requestIdleCallback()方法实现调度
+ * function workLoop(IdleDeadline) {
+ *     while (workInProgress && IdleDeadline.timeRemaining() > 0) {
+ *         performUnitOfWork()
+ *     }
+ * 
+ *     if (!workInProgress && workInProgressRoot) {
+ *         commitRoot()
+ *     }
+ * }
+ * 
+ * requestIdleCallback(workLoop);
+*/
 
-function workLoop(IdleDeadline) {
-    while (workInProgress && IdleDeadline.timeRemaining() > 0) {
+function workLoop() {
+    while (workInProgress) {
         performUnitOfWork()
     }
 
@@ -66,8 +84,6 @@ function workLoop(IdleDeadline) {
         commitRoot()
     }
 }
-
-requestIdleCallback(workLoop);
 
 // 提交
 function commitRoot() {
@@ -81,7 +97,7 @@ function commitWorker(workInProgress) {
     }
     // 1.提交自己
     // parentNode是父DOM节点
-    const parentNode = workInProgress.return.stateNode;
+    const parentNode = getParentStateNode(workInProgress.return);
     const { flags, stateNode } = workInProgress;
     if (flags & Placement && stateNode) {
         parentNode.appendChild(stateNode);
@@ -90,4 +106,14 @@ function commitWorker(workInProgress) {
     commitWorker(workInProgress.child);
     // 3.提交兄弟节点
     commitWorker(workInProgress.sibling);
+}
+
+function getParentStateNode(parentFiber) {
+    let tem = parentFiber;
+    while (tem) {
+        if (tem.stateNode) {
+            return tem.stateNode;
+        }
+        tem = tem.return;
+    }
 }

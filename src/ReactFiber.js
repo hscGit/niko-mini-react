@@ -1,5 +1,5 @@
-import { FunctionComponent, HostComponent } from "./ReactWorkTags";
-import { Placement, isFn, isStr } from "./utils";
+import { ClassComponent, Fragment, FunctionComponent, HostComponent, HostText } from "./ReactWorkTags";
+import { Placement, isFn, isStr, isUndefined } from "./utils";
 
 export function createFiber(vnode, returnFiber) {
     const fiber = {
@@ -23,15 +23,19 @@ export function createFiber(vnode, returnFiber) {
         index: null,
     }
 
-    const {type} = vnode;
+    const { type } = vnode;
 
     if (isStr(type)) {
         fiber.tag = HostComponent;
     } else if (isFn(type)) {
-        // todo
-        fiber.tag = FunctionComponent;
+        // todo 类组件的继承于构造函数Component，tag与函数组件的tag相同
+        // 通过isReactComponent区分
+        fiber.tag = type.prototype.isReactComponent ? ClassComponent : FunctionComponent;
+    } else if (isUndefined(type)) {
+        fiber.tag = HostText;
+        fiber.props = { children: vnode };
     } else {
-
+        fiber.tag = Fragment;
     }
 
     return fiber;

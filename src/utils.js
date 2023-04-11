@@ -20,6 +20,11 @@ export function isFn(fn) {
   return typeof fn === "function";
 }
 
+export function isUndefined(s) {
+  return typeof s === "undefined";
+}
+
+
 export function isArray(arr) {
   return Array.isArray(arr);
 }
