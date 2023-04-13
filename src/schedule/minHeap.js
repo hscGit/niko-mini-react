@@ -51,7 +51,7 @@ function siftUp(heap, node, i) {
         // 获取二叉树头节点下标
         const prarentIndex = (index - 1) >> 1;
         // 获取二叉树头节点
-        const parent = heap(prarentIndex);
+        const parent = heap[prarentIndex];
         // 判断二叉树头节点下标是否比当前节点大
         if (compare(parent, node) > 0) {
             // parent > node

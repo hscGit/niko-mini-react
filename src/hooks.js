@@ -1,14 +1,20 @@
 import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
+import { HookLayout, HookPassive, areHookInputsEqual } from "./utils";
 
 // 当前正在工作的fiber
 let currentlyRenderingFiber = null;
 // 当前正在工作的hook
 let workInProgressHook = null;
+// old hook
+let currentHook = null;
 
 export function renderWithHooks(workInProgress) {
     currentlyRenderingFiber = workInProgress;
     currentlyRenderingFiber.memoizedState = null;
     workInProgressHook = null;
+
+    currentlyRenderingFiber.updateEffectOfEffect = [];
+    currentlyRenderingFiber.updateEffectOfLayout = [];
 }
 
 function updateWorkInProgressHook() {
@@ -29,16 +35,21 @@ function updateWorkInProgressHook() {
             // 负值给hook返回
             // 并当前工作中的hook指向当前工作中的hook的下一个hook(next)
             workInProgressHook = hook = workInProgressHook.next;
+            currentHook = currentHook.next;
         } else {
             // 不存在，是第一个hook
             // 负值给hook返回
             // 并当前工作中的hook指向当前工作中的fiber的第一个hook
             workInProgressHook = hook = currentlyRenderingFiber.memoizedState;
+            currentHook = current.memoizedState;
         }
     } else {
         /*
          * 初次渲染
         */
+        // 初次渲染不存在old hook
+        currentHook = null;
+
         // 创建一个hook并负值给hook返回
         hook = {
             memoizedState: null,
@@ -86,4 +97,39 @@ function dispatchReducerAction(fiber, hook, reducer, action) {
 
 export function useState(initalState) {
     return useReducer(null, initalState);
+}
+
+function updateEffectImp(hookFlags, create, deps) {
+    const hook = updateWorkInProgressHook();
+
+    // 判断old hook是否存在
+    if (currentHook) {
+        // 存在，则检查deps是否变化
+        const prevEffect = currentHook.memoizedState;
+        if (deps) {
+            const prevDeps = prevEffect.deps;
+            if (areHookInputsEqual(deps, prevDeps)) {
+                return;
+            }
+        }
+    }
+
+    // 不存在，则创建
+    const effect = { hookFlags, create, deps };
+
+    hook.memoizedState = effect;
+
+    if (hookFlags & HookPassive) {
+        currentlyRenderingFiber.updateEffectOfEffect.push(effect);
+    } else if (hookFlags & HookLayout) {
+        currentlyRenderingFiber.updateEffectOfLayout.push(effect);
+    }
+}
+
+export function useEffect(create, deps) {
+    return updateEffectImp(HookPassive, create, deps);
+}
+
+export function useLayoutEffect(create, deps) {
+    return updateEffectImp(HookLayout, create, deps);
 }

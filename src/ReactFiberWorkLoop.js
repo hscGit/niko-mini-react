@@ -115,6 +115,7 @@ function commitWorker(workInProgress) {
     if (!workInProgress) {
         return;
     }
+
     // 1.提交自己
     // parentNode是父DOM节点
     const parentNode = getParentStateNode(workInProgress.return);
@@ -135,6 +136,10 @@ function commitWorker(workInProgress) {
 
     if (deletions) {
         commtDeletions(stateNode || parentNode, deletions);
+    }
+
+    if (workInProgress.tag === FunctionComponent) {
+        invokeHooks(workInProgress);
     }
 
     // 2.提交子节点
@@ -182,5 +187,21 @@ function insertOrAppendPlacementNode(stateNode, before, parentNode) {
         parentNode.insertBefore(stateNode, before);
     } else {
         parentNode.appendChild(stateNode);
+    }
+}
+
+function invokeHooks(workInProgress) {
+    const {updateEffectOfEffect, updateEffectOfLayout} = workInProgress;
+
+    for (let i = 0; i < updateEffectOfLayout.length; i++) {
+        const effect = updateEffectOfLayout[i];
+        effect.create()
+    }
+
+    for (let i = 0; i < updateEffectOfEffect.length; i++) {
+        const effect = updateEffectOfEffect[i];
+        scheduleCallback(()=>{
+            effect.create()
+        })
     }
 }
