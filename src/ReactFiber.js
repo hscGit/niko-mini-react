@@ -21,6 +21,12 @@ export function createFiber(vnode, returnFiber) {
         flags: Placement,
         // 记录节点在当前层级下的位置
         index: null,
+        // 记录old fiber，在更新时做对比
+        alternate: null,
+        // 不同组件类型，memoizedState存储的内容也不同
+        // 1. 函数组件中：存储hooks单链表中的第一个hook
+        // 2. 类组件中：存储组件状态state
+        memoizedState: null
     }
 
     const { type } = vnode;

@@ -29,12 +29,30 @@ export function isArray(arr) {
   return Array.isArray(arr);
 }
 
-export function updateNode(node, nextVal) {
+export function updateNode(node, preVal, nextVal) {
+  Object.keys(preVal).forEach(key => {
+    if (key === 'children') {
+      if (isStringOrNumber(preVal[key])) {
+        node.textContent = '';
+      }
+    } else if (key.startsWith('on')) {
+      const eventName = key.slice(2).toLocaleLowerCase();
+      node.removeEventListener(eventName, preVal[key]);
+    } else {
+      if (!(key in nextVal)) {
+        node[key] = '';
+      }
+    }
+  })
+
   Object.keys(nextVal).forEach(key => {
     if (key === 'children') {
       if (isStringOrNumber(nextVal[key])) {
-        node.textContent = nextVal[key];
+        node.textContent = nextVal[key] + '';
       }
+    } else if (key.startsWith('on')) {
+      const eventName = key.slice(2).toLocaleLowerCase();
+      node.addEventListener(eventName, nextVal[key]);
     } else {
       node[key] = nextVal[key];
     }

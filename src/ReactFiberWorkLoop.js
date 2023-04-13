@@ -1,7 +1,25 @@
-import { updateClassComponent, updateFragmentComponent, updateFunctionComponent, updateHostComponent, updateHostTextComponent } from "./ReactFiberReconciler";
-import { ClassComponent, Fragment, FunctionComponent, HostComponent, HostText } from "./ReactWorkTags";
-import { scheduleCallback } from "./schedule";
-import { Placement } from "./utils";
+import {
+    updateClassComponent,
+    updateFragmentComponent,
+    updateFunctionComponent,
+    updateHostComponent,
+    updateHostTextComponent
+} from "./ReactFiberReconciler";
+import {
+    ClassComponent,
+    Fragment,
+    FunctionComponent,
+    HostComponent,
+    HostText
+} from "./ReactWorkTags";
+import {
+    scheduleCallback
+} from "./schedule";
+import {
+    Placement,
+    Update,
+    updateNode
+} from "./utils";
 
 let workInProgress = null; // 当前正在工作中的
 let workInProgressRoot = null;
@@ -16,7 +34,9 @@ export function scheduleUpdateOnFiber(fiber) {
 }
 
 function performUnitOfWork() {
-    const { tag } = workInProgress;
+    const {
+        tag
+    } = workInProgress;
     // todo    1.更新当前组件
     switch (tag) {
         case HostComponent:
@@ -73,7 +93,7 @@ function performUnitOfWork() {
  * }
  * 
  * requestIdleCallback(workLoop);
-*/
+ */
 
 function workLoop() {
     while (workInProgress) {
@@ -98,10 +118,25 @@ function commitWorker(workInProgress) {
     // 1.提交自己
     // parentNode是父DOM节点
     const parentNode = getParentStateNode(workInProgress.return);
-    const { flags, stateNode } = workInProgress;
+    const {
+        flags,
+        stateNode,
+        deletions
+    } = workInProgress;
     if (flags & Placement && stateNode) {
-        parentNode.appendChild(stateNode);
+        const before = getHostSibling(workInProgress.sibling);
+        insertOrAppendPlacementNode(stateNode, before, parentNode);
     }
+
+    if (flags & Update && stateNode) {
+        // 更新
+        updateNode(stateNode, workInProgress.alternate.props, workInProgress.props);
+    }
+
+    if (deletions) {
+        commtDeletions(stateNode || parentNode, deletions);
+    }
+
     // 2.提交子节点
     commitWorker(workInProgress.child);
     // 3.提交兄弟节点
@@ -115,5 +150,37 @@ function getParentStateNode(parentFiber) {
             return tem.stateNode;
         }
         tem = tem.return;
+    }
+}
+
+function commtDeletions(parentNode, deletions) {
+    for (let i = 0; i < deletions.length; i++) {
+        parentNode.removeChild(getStateNode(deletions[i]));
+    }
+}
+
+function getStateNode(fiber) {
+    let tem = fiber;
+    while (!tem) {
+        tem = tem.child;
+    }
+    return tem.stateNode;
+}
+
+function getHostSibling(sibling) {
+    while (sibling) {
+        if (sibling.stateNode && !(sibling.flags & Placement)) {
+            return sibling.stateNode;
+        }
+        sibling = sibling.sibling;
+    }
+    return null;
+}
+
+function insertOrAppendPlacementNode(stateNode, before, parentNode) {
+    if (before) {
+        parentNode.insertBefore(stateNode, before);
+    } else {
+        parentNode.appendChild(stateNode);
     }
 }
