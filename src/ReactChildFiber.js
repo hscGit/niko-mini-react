@@ -23,7 +23,7 @@ export function reconcileChildren(returnFiber, children) {
     let previousNewFiber = null;
     // 循环下标
     let i = 0;
-    // 上一次遍历的节点在oldFiber中的位置
+    // 上一次记录newFiber的oldFiber的最大index
     let lastPlacedIndex = 0;
 
     // old 0 1 2 3 4
@@ -37,19 +37,25 @@ export function reconcileChildren(returnFiber, children) {
         }
 
         if (oldFiber.index > i) {
+            // 暂存oldFiber
             nextOldFiber = oldFiber;
+            // 终止循环
             oldFiber = null;
         } else {
             nextOldFiber = oldFiber.sibling;
         }
 
+        // 创建fiber
         const newFiber = createFiber(newChild, returnFiber);
 
+        // 比较新老fiber
         const same = sameNode(newFiber, oldFiber);
 
         // 判断新老fiber是否相等
         if (!same) {
+            // 不相同，终止循环
             if (oldFiber === null) {
+                // 终止循环前将缓存的oldFiber取出
                 oldFiber = nextOldFiber;
             }
             break;
@@ -62,6 +68,7 @@ export function reconcileChildren(returnFiber, children) {
             flags: Update
         })
 
+        // 判断时否移动位置和记录最远距离
         lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, i, shouldTrackSideEffects);
 
         if (previousNewFiber === null) {
@@ -79,6 +86,7 @@ export function reconcileChildren(returnFiber, children) {
     // *2. 当标记完需更新的新节点后，老节点（可能有多个）还有，老节点要被删除
     if (i === newChildren.length) {
         deleteRemainingChildren(returnFiber, oldFiber);
+        return;
     }
 
     // *3. 初次渲染 || 老节点没了，新节点还有
@@ -92,6 +100,7 @@ export function reconcileChildren(returnFiber, children) {
             // 创建fiber
             const newFiber = createFiber(newChild, returnFiber);
 
+            // 判断时否移动位置和记录最远距离
             lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, i, shouldTrackSideEffects);
 
             if (previousNewFiber === null) {
@@ -107,7 +116,7 @@ export function reconcileChildren(returnFiber, children) {
     }
 
     // *4. 新老节点都还有
-    // 4.1 将剩下的oldF单链表构建哈希表
+    // 4.1 将剩下的oldFer单链表构建哈希表
     const existingChildren = mapRemainingChildren(oldFiber);
     // 4.2 遍历新节点，通过新节点的key去哈希表中查找节点，找到就复用并删除哈希表中对应的节点
     for (; i < newChildren.length; i++) {
@@ -118,19 +127,22 @@ export function reconcileChildren(returnFiber, children) {
         // 创建fiber
         const newFiber = createFiber(newChild, returnFiber);
 
-        // oldFiber
-        const matchFiber = existingChildren.get(newFiber.key || newFiber.index);
+        // 查找哈希表中是否存在可复用的oldFiber
+        const matchedFiber = existingChildren.get(newFiber.key || newFiber.index);
 
-        if (matchFiber) {
+        if (matchedFiber) {
+            // 存在，就复用
             Object.assign(newFiber, {
-                stateNode: matchFiber.stateNode,
-                alternate: matchFiber,
+                stateNode: matchedFiber.stateNode,
+                alternate: matchedFiber,
                 flags: Update
             })
 
+            // 删除哈希表中的已经复用的oldFiber
             existingChildren.delete(newFiber.key || newFiber.index);
         }
 
+        // 判断时否移动位置和记录最远距离
         lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, i, shouldTrackSideEffects);
 
         if (previousNewFiber === null) {
@@ -143,7 +155,7 @@ export function reconcileChildren(returnFiber, children) {
 
         previousNewFiber = newFiber;
     }
-    // *5 old哈希表中还有，遍历哈希表并删除所有
+    // *5 哈希表中还有，遍历哈希表并删除所有
     if (shouldTrackSideEffects) {
         existingChildren.forEach(child => deleteChild(returnFiber, child));
     }
@@ -199,6 +211,7 @@ function placeChild(newFiber, lastPlacedIndex, i, shouldTrackSideEffects) {
     if (current) {
         // 存在，子节点为更新
         const oldIndex = current.index;
+        // 当前节点的oldFer的index小于上次记录的最远位置时，说明当前节点发生了位置移动
         if (oldIndex < lastPlacedIndex) {
             // move
             newFiber.flags |= Placement;
@@ -214,9 +227,12 @@ function placeChild(newFiber, lastPlacedIndex, i, shouldTrackSideEffects) {
 }
 
 function mapRemainingChildren(currentFirstChild) {
+    // 创建哈希表
     const existChildren = new Map();
     let existChild = currentFirstChild;
+    // 循环链表
     while (existChild) {
+        // 将链表中的fiber插入哈希表
         existChildren.set(existChild.key || existChild.index, existChild);
         existChild = existChild.sibling;
     }
